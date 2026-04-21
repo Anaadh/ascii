@@ -215,10 +215,7 @@ button.big { padding: 10px 18px; font-size: 13px; width: 100%; }
   font-variant-ligatures: none;
   font-feature-settings: "kern" 0, "calt" 0, "liga" 0;
   text-rendering: optimizeSpeed;
-}
-
-/* Note: RTL mode will mirror the ASCII art horizontally. 
-   This is necessary for Dhivehi text to flow correctly (right-to-left). */
-#output[dir="rtl"] {
-  text-align: right;
+  /* Force raw visual character order (bypass browser text shaping) */
+  unicode-bidi: bidi-override;
+  direction: ltr;
 }

@@ -88,16 +88,13 @@ $('#fontFamily').addEventListener('change', async () => {
   // Auto-switch direction for Dhivehi fonts
   if (!val.startsWith('var(')) {
     $$('input[name=dir]').forEach(r => r.checked = (r.value === 'rtl'));
-    $('#output').dir = 'rtl';
   } else {
     $$('input[name=dir]').forEach(r => r.checked = (r.value === 'ltr'));
-    $('#output').dir = 'ltr';
   }
   await applyAutoAspect();
 });
 
 $$('input[name=dir]').forEach(r => r.addEventListener('change', () => {
-  $('#output').dir = $('input[name=dir]:checked').value;
   schedule();
 }));
 
@@ -506,6 +503,8 @@ function renderWords(bright, w, h, grid) {
     for (let x = 0; x < w; x++)
       grid[y][x] = ' ';
 
+  const isRtl = ($('input[name=dir]:checked')?.value === 'rtl');
+
   if (!smart) {
     // Flow mode: stream clusters through every ink cell; spaces → filler
     // Regex for clusters: handle Thaana consonant + multiple marks, or any other char
@@ -514,7 +513,7 @@ function renderWords(bright, w, h, grid) {
     const clusters = rawClusters.map(c => /\s/.test(c) ? filler : c);
     let p = 0;
     for (let y = 0; y < h; y++) {
-      for (let x = 0; x < w; x++) {
+      for (let x = isRtl ? w - 1 : 0; isRtl ? x >= 0 : x < w; isRtl ? x-- : x++) {
         if (!ink(y*w + x)) continue;
         grid[y][x] = clusters[p % clusters.length];
         p++;
@@ -532,7 +531,7 @@ function renderWords(bright, w, h, grid) {
     // Build flat list of all ink cells in reading order
     const cells = []; // each entry: { y, x, rowRun } — rowRun = how many contiguous same-row cells from this one
     for (let y = 0; y < h; y++) {
-      for (let x = 0; x < w; x++) {
+      for (let x = isRtl ? w - 1 : 0; isRtl ? x >= 0 : x < w; isRtl ? x-- : x++) {
         if (ink(y*w + x)) cells.push({ y, x });
       }
     }
@@ -541,7 +540,8 @@ function renderWords(bright, w, h, grid) {
     // Walk backwards so each cell's run = 1 + successor's run if adjacent.
     for (let ci = cells.length - 1; ci >= 0; ci--) {
       const next = cells[ci + 1];
-      if (next && next.y === cells[ci].y && next.x === cells[ci].x + 1) {
+      const nextX = isRtl ? cells[ci].x - 1 : cells[ci].x + 1;
+      if (next && next.y === cells[ci].y && next.x === nextX) {
         cells[ci].run = 1 + next.run;
       } else {
         cells[ci].run = 1;
@@ -584,10 +584,11 @@ function renderWords(bright, w, h, grid) {
       wi++;
 
       // Insert filler separator if the very next cell is contiguous on same row
+      const nextX = isRtl ? cells[ci - 1].x - 1 : cells[ci - 1].x + 1;
       if (
         ci < cells.length &&
         cells[ci].y === cells[ci - 1].y &&
-        cells[ci].x === cells[ci - 1].x + 1
+        cells[ci].x === nextX
       ) {
         grid[cells[ci].y][cells[ci].x] = filler;
         ci++;
@@ -681,11 +682,7 @@ function convert() {
     }
   }
 
-  const lines = grid.map(row => {
-    // If RTL, reverse the row array so the browser's RTL flip restores the LTR image shape
-    const processedRow = ($('input[name=dir]:checked')?.value === 'rtl') ? [...row].reverse() : row;
-    return processedRow.join('').replace(/\s+$/, '');
-  });
+  const lines = grid.map(row => row.join('').replace(/\s+$/, ''));
   return { grid, lines, text: lines.join('\n'), colors: outColors, width: outW, height: outH, colorMode };
 }
 
@@ -727,23 +724,13 @@ function escapeHtml(s) {
 function buildColoredHtml(r) {
   // collapse consecutive same-color runs to keep the DOM reasonable
   const fg = $('#fg').value;
-  const isRtl = ($('input[name=dir]:checked')?.value === 'rtl');
   const out = [];
   for (let y = 0; y < r.height; y++) {
     let cur = null, buf = '';
     
-    // Reverse logic for RTL to keep image LTR
-    const rowChars = isRtl ? [...r.grid[y]].reverse() : r.grid[y];
-    const rowColors = [];
-    if (isRtl) {
-      for (let x = r.width - 1; x >= 0; x--) rowColors.push(r.colors[y * r.width + x]);
-    } else {
-      for (let x = 0; x < r.width; x++) rowColors.push(r.colors[y * r.width + x]);
-    }
-
     for (let x = 0; x < r.width; x++) {
-      const c = rowColors[x] || fg;
-      const ch = rowChars[x];
+      const c = r.colors[y*r.width + x] || fg;
+      const ch = r.grid[y][x];
       if (c !== cur) {
         if (buf) out.push(`<span style="color:${cur}">${escapeHtml(buf)}</span>`);
         cur = c; buf = ch;
@@ -825,7 +812,8 @@ pre {
   line-height: ${leading}; 
   letter-spacing: ${tracking}; 
   font-size: 10px; margin: 0; white-space: pre; 
-  direction: ${isRtl ? 'rtl' : 'ltr'};
+  direction: ltr;
+  unicode-bidi: bidi-override;
   font-variant-ligatures: none;
   font-feature-settings: "kern" 0, "calt" 0, "liga" 0;
 }
@@ -875,22 +863,11 @@ function renderToPng(r) {
   ctx.font = `${fontSize}px ${fontStack}`;
   ctx.textBaseline = 'top';
   
-  const isRtl = ($('input[name=dir]:checked')?.value === 'rtl');
-
   for (let y = 0; y < r.height; y++) {
-    // Reverse the grid access if in RTL mode to match the screen's visual correction
-    const row = isRtl ? [...r.grid[y]].reverse() : r.grid[y];
-    const rowColors = [];
-    if (isRtl && r.colorMode === 'image') {
-      for (let x = r.width - 1; x >= 0; x--) rowColors.push(r.colors[y * r.width + x]);
-    } else if (r.colorMode === 'image') {
-      for (let x = 0; x < r.width; x++) rowColors.push(r.colors[y * r.width + x]);
-    }
-
     for (let x = 0; x < r.width; x++) {
-      const ch = row[x];
+      const ch = r.grid[y][x];
       if (ch === ' ' || !ch) continue;
-      ctx.fillStyle = (r.colorMode === 'image') ? rowColors[x] : fg;
+      ctx.fillStyle = (r.colorMode === 'image') ? r.colors[y*r.width + x] : fg;
       ctx.fillText(ch, pad + x * (charW + tracking), pad + y * lineH);
     }
   }
