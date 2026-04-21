@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ASCII Studio — image to ASCII art, your way</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="logo">▞▚▞</span>
+    <div>
+      <h1>ASCII Studio</h1>
+      <p class="sub">image → ascii · custom ramps · word-fills for emblems · edge detection · all in your browser</p>
+    </div>
+  </div>
+  <div class="hint">drop · paste (⌘V) · or pick a file</div>
+</header>
+
+<main class="app">
+  <aside class="panel">
+    <section class="group">
+      <h2>1 · source</h2>
+      <div class="drop" id="drop">
+        <button type="button" id="pickBtn" class="primary big">choose image…</button>
+        <div class="dropMsg">or drop a file here · paste (Ctrl+V)</div>
+        <input type="file" id="file" accept="image/*" class="file-hidden">
+      </div>
+      <div class="row">
+        <input type="url" id="url" placeholder="…or paste an image URL">
+        <button id="loadUrl" class="primary">load</button>
+      </div>
+      <div class="thumb" id="thumbWrap" hidden>
+        <img id="thumb" alt="">
+        <div>
+          <div id="imgInfo">—</div>
+          <button id="clearImg" class="tiny">clear</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="group">
+      <h2>2 · size</h2>
+      <label>width (chars)
+        <input type="range" id="width" min="40" max="400" value="140" step="1">
+        <output id="widthOut">140</output>
+      </label>
+      <label>character aspect (w/h)
+        <input type="range" id="aspect" min="0.35" max="0.75" value="0.5" step="0.01">
+        <output id="aspectOut">0.50</output>
+      </label>
+      <div style="text-align:right;margin-top:-4px;">
+        <button id="aspectAuto" class="tiny" title="Reset to auto-detected font ratio">auto-detect</button>
+      </div>
+    </section>
+
+    <section class="group">
+      <h2>3 · image adjust</h2>
+      <label>shape source
+        <select id="source">
+          <option value="auto" selected>auto (alpha if transparent PNG)</option>
+          <option value="luma">brightness only</option>
+          <option value="alpha">alpha only (shape of opaque pixels)</option>
+          <option value="both">brightness × alpha</option>
+        </select>
+      </label>
+      <label>brightness
+        <input type="range" id="brightness" min="-0.5" max="0.5" value="0" step="0.01">
+        <output id="brightnessOut">0.00</output>
+      </label>
+      <label>contrast
+        <input type="range" id="contrast" min="-1" max="2" value="0.2" step="0.01">
+        <output id="contrastOut">0.20</output>
+      </label>
+      <label>gamma
+        <input type="range" id="gamma" min="0.3" max="3" value="1" step="0.01">
+        <output id="gammaOut">1.00</output>
+      </label>
+      <div class="row compact">
+        <label class="chk"><input type="checkbox" id="invert"> invert</label>
+        <label class="chk"><input type="checkbox" id="dither"> dither</label>
+        <label class="chk"><input type="checkbox" id="grayBias"> luma-weight</label>
+      </div>
+    </section>
+
+    <section class="group">
+      <h2>4 · render mode</h2>
+      <div class="modes">
+        <label><input type="radio" name="mode" value="ramp" checked><span>ramp</span></label>
+        <label><input type="radio" name="mode" value="blocks"><span>blocks</span></label>
+        <label><input type="radio" name="mode" value="words"><span>words</span></label>
+        <label><input type="radio" name="mode" value="edges"><span>edges</span></label>
+        <label><input type="radio" name="mode" value="mixed"><span>edges+words</span></label>
+      </div>
+
+      <div class="mode-opts" data-mode="ramp">
+        <label>character ramp (dark → light)
+          <input type="text" id="ramp" value="@%#W8&amp;$*o+=~-:. ">
+        </label>
+        <div class="presets">
+          <button data-ramp="@%#*+=-:. ">classic</button>
+          <button data-ramp=" .:-=+*#%@">inverse</button>
+          <button data-ramp="█▓▒░ ">blocks</button>
+          <button data-ramp="@$B%8&amp;WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\|()1{}[]?-_+~i!lI;:,^`'. ">dense</button>
+          <button data-ramp=" .·:;+x%#@">short</button>
+          <button data-ramp="◉●◎○◌ ">dots</button>
+          <button data-ramp="NEVER GIVE UP">phrase</button>
+        </div>
+      </div>
+
+      <div class="mode-opts" data-mode="blocks" hidden>
+        <label>block set
+          <select id="blockSet">
+            <option value="shades">shades (░▒▓█)</option>
+            <option value="half">half-blocks (▀▄)</option>
+            <option value="quad">quadrants (▘▝▖▗▚▞█)</option>
+            <option value="braille">braille (⠀⠁⠃⠇⡇⣇⣧⣷⣿)</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="mode-opts" data-mode="words" hidden>
+        <label>text to weave into the image
+          <textarea id="words" rows="6" placeholder="type a manifesto, slogan, lyrics, sigil incantation…">Forged in fire, tempered by time. The emblem of the silent wolf — a covenant written not in blood but in deeds. Stand fast, think clear, act without hesitation. </textarea>
+        </label>
+        <div class="row compact">
+          <label class="chk"><input type="checkbox" id="smartWrap" checked> keep words whole</label>
+          <label class="chk"><input type="checkbox" id="upperWords"> UPPERCASE</label>
+          <label class="chk"><input type="checkbox" id="bolden"> use ramp for depth</label>
+        </div>
+        <label>ink threshold (how much of the image counts as "fill")
+          <input type="range" id="wordThreshold" min="0.1" max="0.95" value="0.55" step="0.01">
+          <output id="wordThresholdOut">0.55</output>
+        </label>
+        <label>filler (for cells where a word won't fit)
+          <input type="text" id="filler" value="·" maxlength="2">
+        </label>
+      </div>
+
+      <div class="mode-opts" data-mode="edges" hidden>
+        <label>edge sensitivity
+          <input type="range" id="edgeThreshold" min="0.05" max="2" value="0.45" step="0.01">
+          <output id="edgeThresholdOut">0.45</output>
+        </label>
+        <label>edge character
+          <input type="text" id="edgeChar" value="#" maxlength="1">
+        </label>
+        <label class="chk"><input type="checkbox" id="edgeDir" checked> directional edges (/\|-)</label>
+      </div>
+
+      <div class="mode-opts" data-mode="mixed" hidden>
+        <label>text for interior
+          <textarea id="mixedWords" rows="4">ad astra per aspera • memento vivere • carpe diem • fortis fortuna adiuvat </textarea>
+        </label>
+        <label>edge sensitivity
+          <input type="range" id="mixedEdge" min="0.05" max="2" value="0.4" step="0.01">
+          <output id="mixedEdgeOut">0.40</output>
+        </label>
+        <label>interior threshold
+          <input type="range" id="mixedFill" min="0.1" max="0.95" value="0.55" step="0.01">
+          <output id="mixedFillOut">0.55</output>
+        </label>
+      </div>
+    </section>
+
+    <section class="group">
+      <h2>5 · color</h2>
+      <div class="row compact">
+        <label class="chk"><input type="radio" name="color" value="none" checked> mono</label>
+        <label class="chk"><input type="radio" name="color" value="image"> image</label>
+        <label class="chk"><input type="radio" name="color" value="solid"> solid</label>
+      </div>
+      <div class="row">
+        <label class="color-lbl">fg <input type="color" id="fg" value="#e8e8e8"></label>
+        <label class="color-lbl">bg <input type="color" id="bg" value="#0d0d0f"></label>
+      </div>
+    </section>
+
+    <section class="group">
+      <h2>6 · export</h2>
+      <div class="exports">
+        <button id="copy">copy text</button>
+        <button id="saveTxt">.txt</button>
+        <button id="saveHtml">.html</button>
+        <button id="savePng">.png</button>
+        <button id="saveSvg">.svg</button>
+      </div>
+    </section>
+  </aside>
+
+  <section class="stage">
+    <div class="stage-head">
+      <span id="stats">load an image to begin</span>
+      <div class="stage-tools">
+        <div class="zoom">
+          <button id="zoomOut" title="zoom out">−</button>
+          <output id="zoomVal">1.0×</output>
+          <button id="zoomIn" title="zoom in">+</button>
+          <button id="zoomFit" title="fit width" class="tiny">fit</button>
+        </div>
+      </div>
+    </div>
+    <div class="viewer" id="viewer">
+      <pre id="output"></pre>
+    </div>
+  </section>
+</main>
+
+<canvas id="work" hidden></canvas>
+<script src="app.js"></script>
+</body>
+</html>
