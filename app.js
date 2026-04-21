@@ -45,16 +45,41 @@ function measureCharAspect() {
 
 async function applyAutoAspect() {
   const selectedFont = $('#fontFamily').value;
-  if (!selectedFont.startsWith('var(')) {
-    await document.fonts.load(`20px ${selectedFont}`);
+  
+  // Only try to load if it's a custom font (not a CSS variable)
+  if (selectedFont && !selectedFont.startsWith('var(')) {
+    try {
+      const fontSpec = `20px "${selectedFont}"`;
+      // Check if font is already loaded
+      if (!document.fonts.check(fontSpec)) {
+        console.log('Loading font:', selectedFont);
+        await Promise.race([
+          document.fonts.load(fontSpec),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Font load timeout')), 3000))
+        ]);
+      }
+    } catch (e) {
+      console.warn('Font load problem:', selectedFont, e.message);
+      // Don't show the error to user as a red bar, just log it
+    }
   }
-  const measured = measureCharAspect();
-  const slider = $('#aspect');
-  const out = $('#aspectOut');
-  const clamped = Math.max(+slider.min, Math.min(+slider.max, measured));
-  slider.value = clamped;
-  out.textContent = clamped.toFixed(2);
-  schedule();
+  
+  try {
+    const measured = measureCharAspect();
+    if (!measured || isNaN(measured) || measured <= 0) {
+      console.warn('Invalid aspect measurement, using fallback');
+      return;
+    }
+    
+    const slider = $('#aspect');
+    const out = $('#aspectOut');
+    const clamped = Math.max(+slider.min, Math.min(+slider.max, measured));
+    slider.value = clamped;
+    out.textContent = clamped.toFixed(2);
+    schedule();
+  } catch (e) {
+    console.error('Measurement error:', e);
+  }
 }
 
 $('#fontFamily').addEventListener('change', async () => {
