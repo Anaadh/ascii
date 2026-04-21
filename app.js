@@ -31,15 +31,20 @@ const state = {
 function measureCharAspect() {
   const cvs = document.createElement('canvas');
   const ctx = cvs.getContext('2d');
-  // Match the #output font exactly (10px base, monospace stack from CSS)
-  const fontStack = 'ui-monospace, "SF Mono", "JetBrains Mono", "Fira Code", Consolas, Menlo, monospace';
+  const selectedFont = $('#fontFamily').value;
+  // Match the #output font exactly (10px base, use current --mono stack)
+  const fontStack = selectedFont.startsWith('var(') ? 'ui-monospace, "SF Mono", "JetBrains Mono", "Fira Code", Consolas, Menlo, monospace' : selectedFont;
   ctx.font = `10px ${fontStack}`;
-  const charW = ctx.measureText('M').width;  // 'M' is a good representative glyph
+  const charW = ctx.measureText('M').width || ctx.measureText('އ').width; // Use Dhivehi char if M is 0
   const charH = 10; // line-height:1 at font-size:10px
   return Math.round((charW / charH) * 100) / 100;
 }
 
-function applyAutoAspect() {
+async function applyAutoAspect() {
+  const selectedFont = $('#fontFamily').value;
+  if (!selectedFont.startsWith('var(')) {
+    await document.fonts.load(`10px ${selectedFont}`);
+  }
   const measured = measureCharAspect();
   const slider = $('#aspect');
   const out = $('#aspectOut');
@@ -47,7 +52,18 @@ function applyAutoAspect() {
   const clamped = Math.max(+slider.min, Math.min(+slider.max, measured));
   slider.value = clamped;
   out.textContent = clamped.toFixed(2);
+  schedule();
 }
+
+$('#fontFamily').addEventListener('change', async () => {
+  document.documentElement.style.setProperty('--mono', $('#fontFamily').value);
+  await applyAutoAspect();
+});
+
+$$('input[name=dir]').forEach(r => r.addEventListener('change', () => {
+  $('#output').dir = $('input[name=dir]:checked').value;
+  schedule();
+}));
 
 let pending;
 function schedule() {
@@ -67,9 +83,9 @@ bindRange('width', 'widthOut');
 bindRange('aspect', 'aspectOut', v => (+v).toFixed(2));
 
 // Set aspect from real font metrics immediately, before first render
-applyAutoAspect();
+applyAutoAspect().then(() => schedule());
 // Allow user to snap back to auto-detected value at any time
-$('#aspectAuto').addEventListener('click', () => { applyAutoAspect(); schedule(); });
+$('#aspectAuto').addEventListener('click', () => { applyAutoAspect(); });
 bindRange('brightness', 'brightnessOut', v => (+v).toFixed(2));
 bindRange('contrast', 'contrastOut', v => (+v).toFixed(2));
 bindRange('gamma', 'gammaOut', v => (+v).toFixed(2));

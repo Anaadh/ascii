@@ -1,3 +1,14 @@
+@font-face { font-family: 'MvIyyuNala'; src: url('dv_fonts/Mv_Iyyu_Nala.otf') format('opentype'); }
+@font-face { font-family: 'MvMAGRound'; src: url('dv_fonts/Mv_MAG_Round_XBold.otf') format('opentype'); }
+@font-face { font-family: 'Randhoo'; src: url('dv_fonts/Randhoo_reg_hinted.ttf') format('truetype'); }
+@font-face { font-family: 'AammufkF'; src: url('dv_fonts/aammufkF.ttf') format('truetype'); }
+@font-face { font-family: 'MidhiliBold'; src: url('dv_fonts/midhilibold.ttf') format('truetype'); }
+@font-face { font-family: 'MvBoli'; src: url('dv_fonts/mvboli.ttf') format('truetype'); }
+@font-face { font-family: 'MvTypeBold'; src: url('dv_fonts/mvtypebold.ttf') format('truetype'); }
+@font-face { font-family: 'MvTypeReg'; src: url('dv_fonts/mvtyper.ttf') format('truetype'); }
+@font-face { font-family: 'MvUtheemuBold'; src: url('dv_fonts/mvutheemuBOLD.ttf') format('truetype'); }
+@font-face { font-family: 'MvUtheemuReg'; src: url('dv_fonts/mvutheemuREGULAR.ttf') format('truetype'); }
+
 :root {
   --bg: #0b0b0e;
   --panel: #131319;
@@ -9,7 +20,8 @@
   --accent: #7dd3fc;
   --accent-2: #a78bfa;
   --ok: #86efac;
-  --mono: ui-monospace, "SF Mono", "JetBrains Mono", "Fira Code", Consolas, Menlo, monospace;
+  --mono-default: ui-monospace, "SF Mono", "JetBrains Mono", "Fira Code", Consolas, Menlo, monospace;
+  --mono: var(--mono-default);
 }
 *, *::before, *::after { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; height: 100%; }

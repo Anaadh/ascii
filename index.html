@@ -41,7 +41,7 @@
     </section>
 
     <section class="group">
-      <h2>2 · size</h2>
+      <h2>2 · size & font</h2>
       <label>width (chars)
         <input type="range" id="width" min="40" max="400" value="140" step="1">
         <output id="widthOut">140</output>
@@ -50,8 +50,29 @@
         <input type="range" id="aspect" min="0.35" max="0.75" value="0.5" step="0.01">
         <output id="aspectOut">0.50</output>
       </label>
-      <div style="text-align:right;margin-top:-4px;">
+      <div style="text-align:right;margin-top:-4px;margin-bottom:10px;">
         <button id="aspectAuto" class="tiny" title="Reset to auto-detected font ratio">auto-detect</button>
+      </div>
+      <label>font family
+        <select id="fontFamily">
+          <option value="var(--mono-default)">Default Monospace</option>
+          <optgroup label="Dhivehi">
+            <option value="MvIyyuNala">Mv Iyyu Nala</option>
+            <option value="MvMAGRound">Mv MAG Round</option>
+            <option value="Randhoo">Randhoo</option>
+            <option value="AammufkF">AammufkF</option>
+            <option value="MidhiliBold">Midhili Bold</option>
+            <option value="MvBoli">Mv Boli</option>
+            <option value="MvTypeBold">Mv Type Bold</option>
+            <option value="MvTypeReg">Mv Type Regular</option>
+            <option value="MvUtheemuBold">Mv Utheemu Bold</option>
+            <option value="MvUtheemuReg">Mv Utheemu Regular</option>
+          </optgroup>
+        </select>
+      </label>
+      <div class="row compact">
+        <label class="chk"><input type="radio" name="dir" value="ltr" checked> LTR</label>
+        <label class="chk"><input type="radio" name="dir" value="rtl"> RTL</label>
       </div>
     </section>
 
