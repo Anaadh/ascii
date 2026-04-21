@@ -682,7 +682,11 @@ function convert() {
     }
   }
 
-  const lines = grid.map(row => row.join('').replace(/\s+$/, ''));
+  const lines = grid.map(row => {
+    let s = row.join('').replace(/\s+$/, '');
+    // Insert Unicode Left-to-Right Override (LRO) to prevent Bidi from ruining ASCII art in text editors
+    return '\u202D' + s + '\u202C';
+  });
   return { grid, lines, text: lines.join('\n'), colors: outColors, width: outW, height: outH, colorMode };
 }
 
@@ -889,8 +893,9 @@ function renderToSvg(r) {
   const H = Math.ceil(r.height * lineH + pad * 2);
   const fg = $('#fg').value, bg = $('#bg').value;
   const lines = r.lines.map((line, y) => {
+    // line already contains LRO/PDF from convert(), but we also apply SVG attributes to be absolutely sure
     const safe = escapeHtml(line);
-    return `<text x="${pad}" y="${pad + (y+1) * lineH - 2}" xml:space="preserve">${safe}</text>`;
+    return `<text x="${pad}" y="${pad + (y+1) * lineH - 2}" xml:space="preserve" direction="ltr" unicode-bidi="bidi-override">${safe}</text>`;
   }).join('\n');
   const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
