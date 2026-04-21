@@ -222,4 +222,14 @@ button.big { padding: 10px 18px; font-size: 13px; width: 100%; }
   display: inline-block;
   user-select: text;
   -webkit-user-select: text;
+  /* Help maintain grid with non-monospace fonts */
+  font-variant-ligatures: none;
+  font-feature-settings: "kern" 0, "calt" 0, "liga" 0;
+  text-rendering: optimizeSpeed;
+}
+
+/* Note: RTL mode will mirror the ASCII art horizontally. 
+   This is necessary for Dhivehi text to flow correctly (right-to-left). */
+#output[dir="rtl"] {
+  text-align: right;
 }

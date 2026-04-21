@@ -32,23 +32,25 @@ function measureCharAspect() {
   const cvs = document.createElement('canvas');
   const ctx = cvs.getContext('2d');
   const selectedFont = $('#fontFamily').value;
-  // Match the #output font exactly (10px base, use current --mono stack)
   const fontStack = selectedFont.startsWith('var(') ? 'ui-monospace, "SF Mono", "JetBrains Mono", "Fira Code", Consolas, Menlo, monospace' : selectedFont;
-  ctx.font = `10px ${fontStack}`;
-  const charW = ctx.measureText('M').width || ctx.measureText('އ').width; // Use Dhivehi char if M is 0
-  const charH = 10; // line-height:1 at font-size:10px
+  ctx.font = `20px ${fontStack}`; // Use larger size for better precision
+  // Measure a string and divide by count to get average width
+  const testStr = "އަހަރެން12345"; 
+  const clusters = testStr.match(/[\u0780-\u07B1][\u07A6-\u07B0]*|./gu) || [];
+  const totalW = ctx.measureText(testStr).width;
+  const charW = totalW / clusters.length;
+  const charH = 20; 
   return Math.round((charW / charH) * 100) / 100;
 }
 
 async function applyAutoAspect() {
   const selectedFont = $('#fontFamily').value;
   if (!selectedFont.startsWith('var(')) {
-    await document.fonts.load(`10px ${selectedFont}`);
+    await document.fonts.load(`20px ${selectedFont}`);
   }
   const measured = measureCharAspect();
   const slider = $('#aspect');
   const out = $('#aspectOut');
-  // Clamp to slider range
   const clamped = Math.max(+slider.min, Math.min(+slider.max, measured));
   slider.value = clamped;
   out.textContent = clamped.toFixed(2);
@@ -56,7 +58,16 @@ async function applyAutoAspect() {
 }
 
 $('#fontFamily').addEventListener('change', async () => {
-  document.documentElement.style.setProperty('--mono', $('#fontFamily').value);
+  const val = $('#fontFamily').value;
+  document.documentElement.style.setProperty('--mono', val);
+  // Auto-switch direction for Dhivehi fonts
+  if (!val.startsWith('var(')) {
+    $$('input[name=dir]').forEach(r => r.checked = (r.value === 'rtl'));
+    $('#output').dir = 'rtl';
+  } else {
+    $$('input[name=dir]').forEach(r => r.checked = (r.value === 'ltr'));
+    $('#output').dir = 'ltr';
+  }
   await applyAutoAspect();
 });
 
@@ -469,22 +480,26 @@ function renderWords(bright, w, h, grid) {
       grid[y][x] = ' ';
 
   if (!smart) {
-    // Flow mode: stream characters through every ink cell; spaces → filler
-    const chars = Array.from(raw).map(c => /\s/.test(c) ? filler : c);
+    // Flow mode: stream clusters through every ink cell; spaces → filler
+    // Regex for clusters: handle Thaana consonant + multiple marks, or any other char
+    const clusterRegex = /[\u0780-\u07B1][\u07A6-\u07B0]*|[^\s]|./gu;
+    const rawClusters = raw.match(clusterRegex) || [];
+    const clusters = rawClusters.map(c => /\s/.test(c) ? filler : c);
     let p = 0;
     for (let y = 0; y < h; y++) {
       for (let x = 0; x < w; x++) {
         if (!ink(y*w + x)) continue;
-        grid[y][x] = chars[p % chars.length];
+        grid[y][x] = clusters[p % clusters.length];
         p++;
       }
     }
   } else {
     // Smart mode: collect ALL ink cells globally (reading order), then
-    // tile words continuously through them. Words can wrap across rows —
-    // no per-row state resets. A filler separator is inserted between words
-    // when cells are contiguous on the same row.
-    const words = raw.split(/\s+/).filter(Boolean);
+    // tile words continuously through them.
+    const words = raw.split(/\s+/).filter(Boolean).map(word => {
+      const clusterRegex = /[\u0780-\u07B1][\u07A6-\u07B0]*|./gu;
+      return word.match(clusterRegex) || [];
+    });
     if (!words.length) return;
 
     // Build flat list of all ink cells in reading order
