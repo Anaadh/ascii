@@ -216,8 +216,8 @@ button.big { padding: 10px 18px; font-size: 13px; width: 100%; }
 #output {
   font-family: var(--mono); white-space: pre; margin: 0;
   font-size: calc(10px * var(--zoom, 1));
-  line-height: 1;
-  letter-spacing: 0;
+  line-height: var(--leading, 1);
+  letter-spacing: var(--tracking, 0);
   color: var(--fg-out, var(--text));
   display: inline-block;
   user-select: text;

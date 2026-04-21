@@ -129,6 +129,8 @@ bindRange('wordThreshold', 'wordThresholdOut', v => (+v).toFixed(2));
 bindRange('edgeThreshold', 'edgeThresholdOut', v => (+v).toFixed(2));
 bindRange('mixedEdge', 'mixedEdgeOut', v => (+v).toFixed(2));
 bindRange('mixedFill', 'mixedFillOut', v => (+v).toFixed(2));
+bindRange('tracking', 'trackingOut', v => (+v).toFixed(1) + 'px');
+bindRange('leading', 'leadingOut', v => (+v).toFixed(2));
 
 ['invert','dither','grayBias','smartWrap','upperWords','bolden','edgeDir']
   .forEach(id => $('#' + id).addEventListener('change', schedule));
@@ -679,7 +681,11 @@ function convert() {
     }
   }
 
-  const lines = grid.map(row => row.join('').replace(/\s+$/, ''));
+  const lines = grid.map(row => {
+    // If RTL, reverse the row array so the browser's RTL flip restores the LTR image shape
+    const processedRow = ($('input[name=dir]:checked')?.value === 'rtl') ? [...row].reverse() : row;
+    return processedRow.join('').replace(/\s+$/, '');
+  });
   return { grid, lines, text: lines.join('\n'), colors: outColors, width: outW, height: outH, colorMode };
 }
 
@@ -694,7 +700,11 @@ function render() {
 
   const out = $('#output');
   const fg = $('#fg').value, bg = $('#bg').value;
+  const tracking = $('#tracking').value;
+  const leading = $('#leading').value;
   out.style.setProperty('--fg-out', fg);
+  out.style.setProperty('--tracking', tracking + 'px');
+  out.style.setProperty('--leading', leading);
   $('.viewer').style.setProperty('--bg-out', bg);
 
   if (r.colorMode === 'image') {
@@ -717,12 +727,23 @@ function escapeHtml(s) {
 function buildColoredHtml(r) {
   // collapse consecutive same-color runs to keep the DOM reasonable
   const fg = $('#fg').value;
+  const isRtl = ($('input[name=dir]:checked')?.value === 'rtl');
   const out = [];
   for (let y = 0; y < r.height; y++) {
     let cur = null, buf = '';
+    
+    // Reverse logic for RTL to keep image LTR
+    const rowChars = isRtl ? [...r.grid[y]].reverse() : r.grid[y];
+    const rowColors = [];
+    if (isRtl) {
+      for (let x = r.width - 1; x >= 0; x--) rowColors.push(r.colors[y * r.width + x]);
+    } else {
+      for (let x = 0; x < r.width; x++) rowColors.push(r.colors[y * r.width + x]);
+    }
+
     for (let x = 0; x < r.width; x++) {
-      const c = r.colors[y*r.width + x] || fg;
-      const ch = r.grid[y][x];
+      const c = rowColors[x] || fg;
+      const ch = rowChars[x];
       if (c !== cur) {
         if (buf) out.push(`<span style="color:${cur}">${escapeHtml(buf)}</span>`);
         cur = c; buf = ch;
