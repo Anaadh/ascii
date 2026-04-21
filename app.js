@@ -800,14 +800,37 @@ $('#saveHtml').addEventListener('click', () => {
   if (!state.result) return;
   const r = state.result;
   const fg = $('#fg').value, bg = $('#bg').value;
+  const fontVal = $('#fontFamily').value;
+  const tracking = $('#tracking').value + 'px';
+  const leading = $('#leading').value;
+  
+  // Extract font-face rules from style.css to include in export
+  const fontFaces = Array.from(document.styleSheets[0].cssRules)
+    .filter(rule => rule.type === CSSRule.FONT_FACE_RULE)
+    .map(rule => rule.cssText)
+    .join('\n');
+
   const body = (r.colorMode === 'image')
     ? buildColoredHtml(r)
     : escapeHtml(r.text);
+    
+  const isRtl = ($('input[name=dir]:checked')?.value === 'rtl');
   const html = `<!DOCTYPE html>
-<html><head><meta charset="UTF-8"><title>ASCII Art</title></head>
-<body style="background:${bg};color:${fg};margin:0;padding:24px;">
-<pre style="font-family:ui-monospace,Menlo,Consolas,monospace;line-height:1;font-size:10px;margin:0;">${body}</pre>
-</body></html>`;
+<html><head><meta charset="UTF-8"><title>ASCII Art</title>
+<style>
+${fontFaces}
+body { background:${bg}; color:${fg}; margin:0; padding:24px; display:flex; justify-content:center; }
+pre { 
+  font-family: ${fontVal.startsWith('var(') ? 'ui-monospace, monospace' : fontVal}; 
+  line-height: ${leading}; 
+  letter-spacing: ${tracking}; 
+  font-size: 10px; margin: 0; white-space: pre; 
+  direction: ${isRtl ? 'rtl' : 'ltr'};
+  font-variant-ligatures: none;
+  font-feature-settings: "kern" 0, "calt" 0, "liga" 0;
+}
+</style></head>
+<body><pre>${body}</pre></body></html>`;
   download('ascii-art.html', html, 'text/html;charset=utf-8');
 });
 $('#savePng').addEventListener('click', () => {
@@ -828,35 +851,56 @@ function download(name, data, type) {
 }
 
 function renderToPng(r) {
-  const fontSize = 16;
-  const charW = fontSize * 0.6;
-  const lineH = fontSize * 1.0;
-  const pad = 24;
+  const fontSize = 24; // base size for crisp PNG
+  const aspect = parseFloat($('#aspect').value);
+  const charW = fontSize * aspect;
+  const leading = parseFloat($('#leading').value);
+  const lineH = fontSize * leading;
+  const tracking = parseFloat($('#tracking').value);
+  const pad = 40;
+  
   const cvs = document.createElement('canvas');
   const scale = 2; // retina
-  cvs.width  = Math.ceil((r.width * charW + pad * 2) * scale);
+  cvs.width  = Math.ceil((r.width * (charW + tracking) + pad * 2) * scale);
   cvs.height = Math.ceil((r.height * lineH + pad * 2) * scale);
   const ctx = cvs.getContext('2d');
   ctx.scale(scale, scale);
+  
   const fg = $('#fg').value, bg = $('#bg').value;
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, cvs.width/scale, cvs.height/scale);
-  ctx.font = `${fontSize}px ui-monospace, "SF Mono", Menlo, Consolas, monospace`;
+  
+  const fontVal = $('#fontFamily').value;
+  const fontStack = fontVal.startsWith('var(') ? 'ui-monospace, monospace' : fontVal;
+  ctx.font = `${fontSize}px ${fontStack}`;
   ctx.textBaseline = 'top';
+  
+  const isRtl = ($('input[name=dir]:checked')?.value === 'rtl');
+
   for (let y = 0; y < r.height; y++) {
+    // Reverse the grid access if in RTL mode to match the screen's visual correction
+    const row = isRtl ? [...r.grid[y]].reverse() : r.grid[y];
+    const rowColors = [];
+    if (isRtl && r.colorMode === 'image') {
+      for (let x = r.width - 1; x >= 0; x--) rowColors.push(r.colors[y * r.width + x]);
+    } else if (r.colorMode === 'image') {
+      for (let x = 0; x < r.width; x++) rowColors.push(r.colors[y * r.width + x]);
+    }
+
     for (let x = 0; x < r.width; x++) {
-      const ch = r.grid[y][x];
-      if (ch === ' ') continue;
-      ctx.fillStyle = (r.colorMode === 'image') ? r.colors[y*r.width + x] : fg;
-      ctx.fillText(ch, pad + x * charW, pad + y * lineH);
+      const ch = row[x];
+      if (ch === ' ' || !ch) continue;
+      ctx.fillStyle = (r.colorMode === 'image') ? rowColors[x] : fg;
+      ctx.fillText(ch, pad + x * (charW + tracking), pad + y * lineH);
     }
   }
+  
   cvs.toBlob(blob => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; a.download = 'ascii-art.png'; a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
-  });
+  }, 'image/png');
 }
 
 function renderToSvg(r) {

@@ -1,14 +1,3 @@
-@font-face { font-family: 'MvIyyuNala'; src: url('dv_fonts/Mv_Iyyu_Nala.otf') format('opentype'); }
-@font-face { font-family: 'MvMAGRound'; src: url('dv_fonts/Mv_MAG_Round_XBold.otf') format('opentype'); }
-@font-face { font-family: 'Randhoo'; src: url('dv_fonts/Randhoo_reg_hinted.ttf') format('truetype'); }
-@font-face { font-family: 'AammufkF'; src: url('dv_fonts/aammufkF.ttf') format('truetype'); }
-@font-face { font-family: 'MidhiliBold'; src: url('dv_fonts/midhilibold.ttf') format('truetype'); }
-@font-face { font-family: 'MvBoli'; src: url('dv_fonts/mvboli.ttf') format('truetype'); }
-@font-face { font-family: 'MvTypeBold'; src: url('dv_fonts/mvtypebold.ttf') format('truetype'); }
-@font-face { font-family: 'MvTypeReg'; src: url('dv_fonts/mvtyper.ttf') format('truetype'); }
-@font-face { font-family: 'MvUtheemuBold'; src: url('dv_fonts/mvutheemuBOLD.ttf') format('truetype'); }
-@font-face { font-family: 'MvUtheemuReg'; src: url('dv_fonts/mvutheemuREGULAR.ttf') format('truetype'); }
-
 :root {
   --bg: #0b0b0e;
   --panel: #131319;
