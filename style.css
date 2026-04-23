@@ -220,14 +220,26 @@ button.big { padding: 10px 18px; font-size: 13px; width: 100%; }
   direction: ltr;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .app {
-    grid-template-columns: 1fr;
-    grid-template-rows: minmax(auto, 45vh) 1fr;
+    display: flex;
+    flex-direction: column-reverse; /* Controls at bottom, stage at top in DOM order */
+    overflow-y: auto;
+  }
+  .stage {
+    position: sticky;
+    top: 0;
+    height: 50vh; /* Stage takes top half */
+    flex: none;
+    z-index: 10;
+    border-bottom: 1px solid var(--line);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5); /* Shadow to separate from scrolling controls */
   }
   .panel {
     border-right: none;
-    border-bottom: 1px solid var(--line);
+    overflow: visible; /* Let it expand and scroll naturally within .app */
+    padding: 16px;
+    flex: none;
   }
   .topbar {
     padding: 12px 16px;

@@ -886,21 +886,44 @@ function renderToPng(r) {
 
 function renderToSvg(r) {
   const fontSize = 14;
-  const charW = fontSize * 0.6;
-  const lineH = fontSize * 1.0;
+  const aspect = parseFloat($('#aspect').value);
+  const charW = fontSize * aspect;
+  const leading = parseFloat($('#leading').value);
+  const lineH = fontSize * leading;
+  const tracking = parseFloat($('#tracking').value);
   const pad = 20;
-  const W = Math.ceil(r.width * charW + pad * 2);
+  
+  const W = Math.ceil(r.width * (charW + tracking) + pad * 2);
   const H = Math.ceil(r.height * lineH + pad * 2);
   const fg = $('#fg').value, bg = $('#bg').value;
+  
+  const fontVal = $('#fontFamily').value;
+  const fontStack = fontVal.startsWith('var(') ? '"Courier New", Courier, monospace' : fontVal;
+
+  const fontFaces = Array.from(document.styleSheets)
+    .flatMap(sheet => {
+      try { return Array.from(sheet.cssRules); } catch(e) { return []; }
+    })
+    .filter(rule => rule.type === CSSRule.FONT_FACE_RULE)
+    .map(rule => rule.cssText)
+    .join('\n');
+
   const lines = r.lines.map((line, y) => {
     // line already contains LRO/PDF from convert(), but we also apply SVG attributes to be absolutely sure
     const safe = escapeHtml(line);
-    return `<text x="${pad}" y="${pad + (y+1) * lineH - 2}" xml:space="preserve" direction="ltr" unicode-bidi="bidi-override">${safe}</text>`;
+    return `<text x="${pad}" y="${pad + (y+1) * lineH - 2}" xml:space="preserve" direction="ltr" unicode-bidi="bidi-override" letter-spacing="${tracking}">${safe}</text>`;
   }).join('\n');
+  
   const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+  <defs>
+    <style>
+      ${fontFaces}
+      text { font-variant-ligatures: none; font-feature-settings: "kern" 0, "calt" 0, "liga" 0; }
+    </style>
+  </defs>
   <rect width="100%" height="100%" fill="${bg}"/>
-  <g fill="${fg}" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="${fontSize}" xml:space="preserve">
+  <g fill="${fg}" font-family="${fontStack}, monospace" font-size="${fontSize}" xml:space="preserve">
 ${lines}
   </g>
 </svg>`;
