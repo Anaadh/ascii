@@ -158,6 +158,8 @@ function bindRange(id, outId, fmt = (v) => v) {
 bindRange('width', 'widthOut');
 bindRange('aspect', 'aspectOut', v => (+v).toFixed(2));
 bindRange('glitch', 'glitchOut');
+bindRange('glitchFreq', 'glitchFreqOut', v => (+v).toFixed(2));
+bindRange('glitchSeed', 'glitchSeedOut');
 
 // Set aspect from real font metrics immediately, before first render
 applyAutoAspect().then(() => schedule());
@@ -727,13 +729,16 @@ function convert() {
   }
 
   const glitchIntensity = parseInt($('#glitch').value);
+  const glitchFreq = parseFloat($('#glitchFreq').value);
+  const glitchSeed = parseInt($('#glitchSeed').value);
+  
   if (glitchIntensity > 0) {
     for (let y = 0; y < outH; y++) {
       // Create organic wave-like chunks
-      const wave1 = Math.sin(y * 0.1) * Math.cos(y * 0.03);
+      const wave1 = Math.sin(y * glitchFreq + glitchSeed) * Math.cos(y * (glitchFreq * 0.3) + glitchSeed * 2.1);
       
       // Seeded random for sharp jagged tearing within chunks
-      const seed = y * 1337 + glitchIntensity;
+      const seed = y * 1337 + glitchIntensity + glitchSeed * 997;
       const r = Math.abs(Math.sin(seed)) * 10000;
       const rnd = r - Math.floor(r);
       
