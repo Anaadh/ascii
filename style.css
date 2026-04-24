@@ -202,20 +202,32 @@ button.big { padding: 10px 18px; font-size: 13px; width: 100%; }
 .viewer::-webkit-scrollbar { width: 10px; height: 10px; }
 .viewer::-webkit-scrollbar-thumb { background: var(--line); border-radius: 10px; border: 2px solid var(--bg); }
 
+#outputContainer {
+  position: relative;
+  display: inline-block;
+  transform-origin: top left;
+  transform: scale(var(--zoom, 1));
+}
+
+#outputCanvas {
+  display: block;
+  pointer-events: none; /* Let clicks pass through to text selection */
+}
+
 #output {
   font-family: var(--mono); white-space: pre; margin: 0;
-  font-size: calc(10px * var(--zoom, 1));
+  font-size: 14px; /* Canvas uses 14px base, container scales it */
   line-height: var(--leading, 1);
   letter-spacing: var(--tracking, 0);
-  color: var(--fg-out, var(--text));
-  display: inline-block;
+  color: transparent; /* Hide text, show canvas */
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  overflow: hidden;
   user-select: text;
   -webkit-user-select: text;
-  /* Help maintain grid with non-monospace fonts */
   font-variant-ligatures: none;
   font-feature-settings: "kern" 0, "calt" 0, "liga" 0;
   text-rendering: optimizeSpeed;
-  /* Force raw visual character order (bypass browser text shaping) */
   unicode-bidi: bidi-override;
   direction: ltr;
 }

@@ -735,6 +735,43 @@ function convert() {
 
 // ---------- DOM rendering ----------
 
+function renderCanvasPreview(r, cvs) {
+  const fontSize = 14; 
+  const aspect = parseFloat($('#aspect').value);
+  const charW = fontSize * aspect;
+  const leading = parseFloat($('#leading').value);
+  const lineH = fontSize * leading;
+  const tracking = parseFloat($('#tracking').value);
+  
+  const W = Math.ceil(r.width * (charW + tracking));
+  const H = Math.ceil(r.height * lineH);
+  
+  const scale = window.devicePixelRatio || 2;
+  cvs.width = W * scale;
+  cvs.height = H * scale;
+  cvs.style.width = `${W}px`;
+  cvs.style.height = `${H}px`;
+  
+  const ctx = cvs.getContext('2d');
+  ctx.scale(scale, scale);
+  ctx.clearRect(0, 0, W, H);
+  
+  const fg = $('#fg').value;
+  const fontVal = $('#fontFamily').value;
+  const fontStack = fontVal.startsWith('var(') ? 'ui-monospace, monospace' : fontVal;
+  ctx.font = `${fontSize}px ${fontStack}`;
+  ctx.textBaseline = 'top';
+  
+  for (let y = 0; y < r.height; y++) {
+    for (let x = 0; x < r.width; x++) {
+      const ch = r.grid[y][x];
+      if (ch === ' ' || !ch) continue;
+      ctx.fillStyle = (r.colorMode === 'image') ? r.colors[y*r.width + x] : fg;
+      ctx.fillText(ch, x * (charW + tracking), y * lineH);
+    }
+  }
+}
+
 function render() {
   if (!state.img) return;
   const start = performance.now();
@@ -743,22 +780,19 @@ function render() {
   state.result = r;
 
   const out = $('#output');
-  const fg = $('#fg').value, bg = $('#bg').value;
+  const bg = $('#bg').value;
   const tracking = $('#tracking').value;
   const leading = $('#leading').value;
-  out.style.setProperty('--fg-out', fg);
+  
   out.style.setProperty('--tracking', tracking + 'px');
   out.style.setProperty('--leading', leading);
   $('.viewer').style.setProperty('--bg-out', bg);
 
-  if (r.colorMode === 'image') {
-    out.innerHTML = buildColoredHtml(r);
-  } else if (r.colorMode === 'solid') {
-    out.textContent = r.text;
-    out.style.setProperty('--fg-out', fg);
-  } else {
-    out.textContent = r.text;
-  }
+  // Render to canvas for perfect geometric alignment
+  renderCanvasPreview(r, $('#outputCanvas'));
+  
+  // Fill invisible text for selection/copying
+  out.textContent = r.text;
 
   const dt = performance.now() - start;
   $('#stats').textContent = `${r.width} × ${r.height} chars · ${r.lines.length} rows · ${r.text.length.toLocaleString()} glyphs · ${dt.toFixed(0)}ms`;
@@ -795,7 +829,7 @@ function buildColoredHtml(r) {
 
 function setZoom(z) {
   state.zoom = Math.max(0.25, Math.min(4, z));
-  $('#output').style.setProperty('--zoom', state.zoom);
+  $('#outputContainer').style.setProperty('--zoom', state.zoom);
   $('#zoomVal').textContent = state.zoom.toFixed(1) + '×';
 }
 $('#zoomIn').addEventListener('click', () => setZoom(state.zoom * 1.15));
@@ -804,8 +838,15 @@ $('#zoomFit').addEventListener('click', () => {
   if (!state.result) return;
   const viewer = $('#viewer');
   const avail = viewer.clientWidth - 40;
-  const baseCharW = 10 * 0.6; // font-size 10px * 0.6 monospace aspect
-  const target = avail / (state.result.width * baseCharW);
+  
+  // Calculate width based on the actual charW math
+  const fontSize = 14; 
+  const aspect = parseFloat($('#aspect').value);
+  const charW = fontSize * aspect;
+  const tracking = parseFloat($('#tracking').value);
+  const totalW = state.result.width * (charW + tracking);
+  
+  const target = avail / totalW;
   setZoom(target);
 });
 $('#viewer').addEventListener('wheel', (e) => {
