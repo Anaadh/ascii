@@ -86,12 +86,55 @@ $('#fontFamily').addEventListener('change', async () => {
   const val = $('#fontFamily').value;
   document.documentElement.style.setProperty('--mono', val);
   // Auto-switch direction for Dhivehi fonts
-  if (!val.startsWith('var(')) {
+  if (!val.startsWith('var(') && !val.startsWith('Custom_')) {
     $$('input[name=dir]').forEach(r => r.checked = (r.value === 'rtl'));
-  } else {
+  } else if (!val.startsWith('Custom_')) {
     $$('input[name=dir]').forEach(r => r.checked = (r.value === 'ltr'));
   }
   await applyAutoAspect();
+});
+
+$('#uploadFontBtn').addEventListener('click', () => $('#fontUpload').click());
+$('#fontUpload').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const nameParts = file.name.split('.');
+  const ext = nameParts.pop().toLowerCase();
+  const baseName = nameParts.join('_').replace(/[^a-zA-Z0-9_]/g, '') || 'CustomFont';
+  const fontName = `Custom_${baseName}_${Date.now()}`;
+  
+  const reader = new FileReader();
+  reader.onload = async (ev) => {
+    const dataUrl = ev.target.result;
+    
+    // Inject @font-face style
+    const style = document.createElement('style');
+    const format = ext === 'woff2' ? 'woff2' : ext === 'woff' ? 'woff' : ext === 'otf' ? 'opentype' : 'truetype';
+    style.textContent = `@font-face { font-family: '${fontName}'; src: url(${dataUrl}) format('${format}'); }`;
+    document.head.appendChild(style);
+    
+    // Ensure font loads
+    try {
+      const font = new FontFace(fontName, `url(${dataUrl})`);
+      await font.load();
+      document.fonts.add(font);
+    } catch(err) {
+      console.warn("Could not pre-load font via FontFace API, but CSS is injected.", err);
+    }
+    
+    // Add to UI
+    const group = $('#customFonts');
+    group.hidden = false;
+    const opt = document.createElement('option');
+    opt.value = fontName;
+    opt.textContent = file.name;
+    group.appendChild(opt);
+    
+    // Select and apply
+    $('#fontFamily').value = fontName;
+    $('#fontFamily').dispatchEvent(new Event('change'));
+  };
+  reader.readAsDataURL(file);
 });
 
 $$('input[name=dir]').forEach(r => r.addEventListener('change', () => {

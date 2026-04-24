@@ -55,21 +55,26 @@
         <button id="aspectAuto" class="tiny" title="Reset to auto-detected font ratio">auto-detect</button>
       </div>
       <label>font family
-        <select id="fontFamily">
-          <option value="var(--mono-default)">Default Monospace</option>
-          <optgroup label="Dhivehi">
-            <option value="MvIyyuNala">Mv Iyyu Nala</option>
-            <option value="MvMAGRound">Mv MAG Round</option>
-            <option value="Randhoo">Randhoo</option>
-            <option value="AammufkF">AammufkF</option>
-            <option value="MidhiliBold">Midhili Bold</option>
-            <option value="MvBoli">Mv Boli</option>
-            <option value="MvTypeBold">Mv Type Bold</option>
-            <option value="MvTypeReg">Mv Type Regular</option>
-            <option value="MvUtheemuBold">Mv Utheemu Bold</option>
-            <option value="MvUtheemuReg">Mv Utheemu Regular</option>
-          </optgroup>
-        </select>
+        <div style="display: flex; gap: 6px;">
+          <select id="fontFamily" style="flex: 1;">
+            <option value="var(--mono-default)">Default Monospace</option>
+            <optgroup label="Custom" id="customFonts" hidden></optgroup>
+            <optgroup label="Dhivehi">
+              <option value="MvIyyuNala">Mv Iyyu Nala</option>
+              <option value="MvMAGRound">Mv MAG Round</option>
+              <option value="Randhoo">Randhoo</option>
+              <option value="AammufkF">AammufkF</option>
+              <option value="MidhiliBold">Midhili Bold</option>
+              <option value="MvBoli">Mv Boli</option>
+              <option value="MvTypeBold">Mv Type Bold</option>
+              <option value="MvTypeReg">Mv Type Regular</option>
+              <option value="MvUtheemuBold">Mv Utheemu Bold</option>
+              <option value="MvUtheemuReg">Mv Utheemu Regular</option>
+            </optgroup>
+          </select>
+          <button id="uploadFontBtn" class="tiny" title="Upload custom font" style="padding: 0 8px; margin-top: 4px;">+</button>
+          <input type="file" id="fontUpload" accept=".ttf,.otf,.woff,.woff2" class="file-hidden">
+        </div>
       </label>
       <div class="row compact">
         <label class="chk"><input type="radio" name="dir" value="ltr" checked> LTR</label>
