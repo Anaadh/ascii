@@ -157,6 +157,7 @@ function bindRange(id, outId, fmt = (v) => v) {
 }
 bindRange('width', 'widthOut');
 bindRange('aspect', 'aspectOut', v => (+v).toFixed(2));
+bindRange('glitch', 'glitchOut');
 
 // Set aspect from real font metrics immediately, before first render
 applyAutoAspect().then(() => schedule());
@@ -721,6 +722,43 @@ function convert() {
       for (let x = 0; x < outW; x++) {
         const oi = Math.min(height-1, Math.floor(y * sy)) * width + Math.min(width-1, Math.floor(x * sx));
         outColors[y*outW + x] = colors[oi];
+      }
+    }
+  }
+
+  const glitchIntensity = parseInt($('#glitch').value);
+  if (glitchIntensity > 0) {
+    for (let y = 0; y < outH; y++) {
+      // Create organic wave-like chunks
+      const wave1 = Math.sin(y * 0.1) * Math.cos(y * 0.03);
+      
+      // Seeded random for sharp jagged tearing within chunks
+      const seed = y * 1337 + glitchIntensity;
+      const r = Math.abs(Math.sin(seed)) * 10000;
+      const rnd = r - Math.floor(r);
+      
+      let shift = 0;
+      if (Math.abs(wave1) > 0.3) {
+        shift = Math.floor(wave1 * glitchIntensity);
+        // Add random sharp noise
+        if (rnd < 0.4) {
+          shift += Math.floor((rnd * 2 - 1) * (glitchIntensity / 2));
+        }
+      }
+      
+      if (shift !== 0) {
+        const oldRow = [...grid[y]];
+        for (let x = 0; x < outW; x++) {
+          let nx = x - shift;
+          grid[y][x] = (nx >= 0 && nx < outW) ? oldRow[nx] : ' ';
+        }
+        if (colorMode === 'image') {
+          const oldRowColors = outColors.slice(y * outW, (y + 1) * outW);
+          for (let x = 0; x < outW; x++) {
+            let nx = x - shift;
+            outColors[y * outW + x] = (nx >= 0 && nx < outW) ? oldRowColors[nx] : null;
+          }
+        }
       }
     }
   }
