@@ -30,12 +30,14 @@ const state = {
 // This gives a pixel-perfect ratio so images aren't distorted.
 // Preview renders at this fontSize — measure at same size so aspect is self-consistent.
 const PREVIEW_FONT_SIZE = 14;
+// Must match --mono-default in CSS; canvas doesn't resolve CSS variables.
+const MONO_STACK = 'ui-monospace, "SF Mono", "JetBrains Mono", "Fira Code", Consolas, Menlo, monospace';
 
 function measureCharAspect() {
   const cvs = document.createElement('canvas');
   const ctx = cvs.getContext('2d');
   const selectedFont = $('#fontFamily').value;
-  const fontStack = selectedFont.startsWith('var(') ? 'ui-monospace, "SF Mono", "JetBrains Mono", "Fira Code", Consolas, Menlo, monospace' : selectedFont;
+  const fontStack = selectedFont.startsWith('var(') ? MONO_STACK : selectedFont;
   // Measure at the same fontSize the preview renders — keeps aspect self-calibrated.
   ctx.font = `${PREVIEW_FONT_SIZE}px ${fontStack}`;
   // Wide ASCII run for stable advance width; avoid variable-width Unicode here.
@@ -786,7 +788,7 @@ function renderCanvasPreview(r, cvs) {
   
   const fg = $('#fg').value;
   const fontVal = $('#fontFamily').value;
-  const fontStack = fontVal.startsWith('var(') ? 'ui-monospace, monospace' : fontVal;
+  const fontStack = fontVal.startsWith('var(') ? MONO_STACK : fontVal;
   
   // Measure actual advance width at this fontSize — pixel-accurate for current font/size.
   const ctx_m = document.createElement('canvas').getContext('2d');
@@ -893,7 +895,7 @@ $('#zoomFit').addEventListener('click', () => {
   const tracking = parseFloat($('#tracking').value);
   // Use measured charW to match renderCanvasPreview exactly.
   const fontVal_z = $('#fontFamily').value;
-  const fontStack_z = fontVal_z.startsWith('var(') ? 'ui-monospace, monospace' : fontVal_z;
+  const fontStack_z = fontVal_z.startsWith('var(') ? MONO_STACK : fontVal_z;
   const ctx_z = document.createElement('canvas').getContext('2d');
   ctx_z.font = `${PREVIEW_FONT_SIZE}px ${fontStack_z}`;
   const charW = ctx_z.measureText('M'.repeat(20)).width / 20;
@@ -950,7 +952,7 @@ $('#saveHtml').addEventListener('click', () => {
 ${fontFaces}
 body { background:${bg}; color:${fg}; margin:0; padding:24px; display:flex; justify-content:center; }
 pre { 
-  font-family: ${fontVal.startsWith('var(') ? 'ui-monospace, monospace' : fontVal}; 
+  font-family: ${fontVal.startsWith('var(') ? MONO_STACK : fontVal}; 
   line-height: ${leading}; 
   letter-spacing: ${tracking}; 
   font-size: 10px; margin: 0; white-space: pre; 
@@ -1005,7 +1007,7 @@ function renderToPng(r) {
   }
   
   const fontVal = $('#fontFamily').value;
-  const fontStack = fontVal.startsWith('var(') ? 'ui-monospace, monospace' : fontVal;
+  const fontStack = fontVal.startsWith('var(') ? MONO_STACK : fontVal;
   ctx.font = `${fontSize}px ${fontStack}`;
   ctx.textBaseline = 'top';
   
