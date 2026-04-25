@@ -28,19 +28,19 @@ const state = {
 // Measures the real rendered width/height of a monospace character
 // using a hidden canvas with the same font as #output.
 // This gives a pixel-perfect ratio so images aren't distorted.
+// Preview renders at this fontSize — measure at same size so aspect is self-consistent.
+const PREVIEW_FONT_SIZE = 14;
+
 function measureCharAspect() {
   const cvs = document.createElement('canvas');
   const ctx = cvs.getContext('2d');
   const selectedFont = $('#fontFamily').value;
   const fontStack = selectedFont.startsWith('var(') ? 'ui-monospace, "SF Mono", "JetBrains Mono", "Fira Code", Consolas, Menlo, monospace' : selectedFont;
-  ctx.font = `20px ${fontStack}`; // Use larger size for better precision
-  // Measure a string and divide by count to get average width
-  const testStr = "އަހަރެން12345"; 
-  const clusters = testStr.match(/[\u0780-\u07B1][\u07A6-\u07B0]*|./gu) || [];
-  const totalW = ctx.measureText(testStr).width;
-  const charW = totalW / clusters.length;
-  const charH = 20; 
-  return Math.round((charW / charH) * 100) / 100;
+  // Measure at the same fontSize the preview renders — keeps aspect self-calibrated.
+  ctx.font = `${PREVIEW_FONT_SIZE}px ${fontStack}`;
+  // Wide ASCII run for stable advance width; avoid variable-width Unicode here.
+  const charW = ctx.measureText('M'.repeat(20)).width / 20;
+  return Math.round((charW / PREVIEW_FONT_SIZE) * 100) / 100;
 }
 
 async function applyAutoAspect() {
@@ -49,7 +49,7 @@ async function applyAutoAspect() {
   // Only try to load if it's a custom font (not a CSS variable)
   if (selectedFont && !selectedFont.startsWith('var(')) {
     try {
-      const fontSpec = `20px "${selectedFont}"`;
+      const fontSpec = `${PREVIEW_FONT_SIZE}px "${selectedFont}"`;
       // Check if font is already loaded
       if (!document.fonts.check(fontSpec)) {
         console.log('Loading font:', selectedFont);
@@ -779,12 +779,20 @@ function convert() {
 // ---------- DOM rendering ----------
 
 function renderCanvasPreview(r, cvs) {
-  const fontSize = 14; 
+  const fontSize = PREVIEW_FONT_SIZE;
   const aspect = parseFloat($('#aspect').value);
-  const charW = fontSize * aspect;
   const leading = parseFloat($('#leading').value);
-  const lineH = fontSize * leading;
   const tracking = parseFloat($('#tracking').value);
+  
+  const fg = $('#fg').value;
+  const fontVal = $('#fontFamily').value;
+  const fontStack = fontVal.startsWith('var(') ? 'ui-monospace, monospace' : fontVal;
+  
+  // Measure actual advance width at this fontSize — pixel-accurate for current font/size.
+  const ctx_m = document.createElement('canvas').getContext('2d');
+  ctx_m.font = `${fontSize}px ${fontStack}`;
+  const charW = ctx_m.measureText('M'.repeat(20)).width / 20;
+  const lineH = fontSize * leading;
   
   const W = Math.ceil(r.width * (charW + tracking));
   const H = Math.ceil(r.height * lineH);
@@ -799,9 +807,6 @@ function renderCanvasPreview(r, cvs) {
   ctx.scale(scale, scale);
   ctx.clearRect(0, 0, W, H);
   
-  const fg = $('#fg').value;
-  const fontVal = $('#fontFamily').value;
-  const fontStack = fontVal.startsWith('var(') ? 'ui-monospace, monospace' : fontVal;
   ctx.font = `${fontSize}px ${fontStack}`;
   ctx.textBaseline = 'top';
   
@@ -884,10 +889,14 @@ $('#zoomFit').addEventListener('click', () => {
   const avail = viewer.clientWidth - 40;
   
   // Calculate width based on the actual charW math
-  const fontSize = 14; 
   const aspect = parseFloat($('#aspect').value);
-  const charW = fontSize * aspect;
   const tracking = parseFloat($('#tracking').value);
+  // Use measured charW to match renderCanvasPreview exactly.
+  const fontVal_z = $('#fontFamily').value;
+  const fontStack_z = fontVal_z.startsWith('var(') ? 'ui-monospace, monospace' : fontVal_z;
+  const ctx_z = document.createElement('canvas').getContext('2d');
+  ctx_z.font = `${PREVIEW_FONT_SIZE}px ${fontStack_z}`;
+  const charW = ctx_z.measureText('M'.repeat(20)).width / 20;
   const totalW = state.result.width * (charW + tracking);
   
   const target = avail / totalW;
