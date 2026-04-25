@@ -175,7 +175,7 @@ bindRange('mixedFill', 'mixedFillOut', v => (+v).toFixed(2));
 bindRange('tracking', 'trackingOut', v => (+v).toFixed(1) + 'px');
 bindRange('leading', 'leadingOut', v => (+v).toFixed(2));
 
-['invert','dither','grayBias','smartWrap','upperWords','bolden','edgeDir']
+['invert','dither','grayBias','smartWrap','upperWords','bolden','edgeDir','bgTransparent']
   .forEach(id => $('#' + id).addEventListener('change', schedule));
 ['ramp','words','mixedWords','edgeChar','filler','blockSet','fg','bg']
   .forEach(id => $('#' + id).addEventListener('input', schedule));
@@ -823,7 +823,8 @@ function render() {
   state.result = r;
 
   const out = $('#output');
-  const bg = $('#bg').value;
+  const isTransparent = $('#bgTransparent').checked;
+  const bg = isTransparent ? 'transparent' : $('#bg').value;
   const tracking = $('#tracking').value;
   const leading = $('#leading').value;
   
@@ -917,7 +918,8 @@ $('#saveTxt').addEventListener('click', () => {
 $('#saveHtml').addEventListener('click', () => {
   if (!state.result) return;
   const r = state.result;
-  const fg = $('#fg').value, bg = $('#bg').value;
+  const isTransparent = $('#bgTransparent').checked;
+  const fg = $('#fg').value, bg = isTransparent ? 'transparent' : $('#bg').value;
   const fontVal = $('#fontFamily').value;
   const tracking = $('#tracking').value + 'px';
   const leading = $('#leading').value;
@@ -985,9 +987,13 @@ function renderToPng(r) {
   const ctx = cvs.getContext('2d');
   ctx.scale(scale, scale);
   
+  const isTransparent = $('#bgTransparent').checked;
   const fg = $('#fg').value, bg = $('#bg').value;
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, cvs.width/scale, cvs.height/scale);
+  
+  if (!isTransparent) {
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, cvs.width/scale, cvs.height/scale);
+  }
   
   const fontVal = $('#fontFamily').value;
   const fontStack = fontVal.startsWith('var(') ? 'ui-monospace, monospace' : fontVal;
@@ -1022,6 +1028,7 @@ function renderToSvg(r) {
   
   const W = Math.ceil(r.width * (charW + tracking) + pad * 2);
   const H = Math.ceil(r.height * lineH + pad * 2);
+  const isTransparent = $('#bgTransparent').checked;
   const fg = $('#fg').value, bg = $('#bg').value;
   
   const fontVal = $('#fontFamily').value;
@@ -1049,7 +1056,7 @@ function renderToSvg(r) {
       text { font-variant-ligatures: none; font-feature-settings: "kern" 0, "calt" 0, "liga" 0; }
     </style>
   </defs>
-  <rect width="100%" height="100%" fill="${bg}"/>
+  ${!isTransparent ? `<rect width="100%" height="100%" fill="${bg}"/>` : ''}
   <g fill="${fg}" font-family="${fontStack}, monospace" font-size="${fontSize}" xml:space="preserve">
 ${lines}
   </g>
