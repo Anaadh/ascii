@@ -969,9 +969,23 @@ $('#savePng').addEventListener('click', () => {
   if (!state.result) return;
   renderToPng(state.result);
 });
-$('#saveSvg').addEventListener('click', () => {
+$('#saveSvg').addEventListener('click', async () => {
   if (!state.result) return;
-  renderToSvg(state.result);
+  const isOutline = $('#svgOutlines').checked;
+  if (isOutline) {
+    const btn = $('#saveSvg');
+    const prev = btn.textContent;
+    btn.textContent = 'processing...';
+    try {
+      await renderToSvgOutlines(state.result);
+    } catch(e) {
+      console.error(e);
+      alert("Failed to create outlines: " + e.message);
+    }
+    btn.textContent = prev;
+  } else {
+    renderToSvg(state.result);
+  }
 });
 
 function download(name, data, type) {
@@ -1026,6 +1040,99 @@ function renderToPng(r) {
     a.href = url; a.download = 'ascii-art.png'; a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }, 'image/png');
+}
+
+function base64ToArrayBuffer(base64) {
+  const binary_string = window.atob(base64);
+  const len = binary_string.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) bytes[i] = binary_string.charCodeAt(i);
+  return bytes.buffer;
+}
+
+async function renderToSvgOutlines(r) {
+  const fontVal = $('#fontFamily').value;
+  if (fontVal.startsWith('var(')) {
+    alert("Cannot create outlines for default system fonts. Please select a Dhivehi font or upload a custom font.");
+    return;
+  }
+  
+  if (typeof opentype === 'undefined') {
+    alert("opentype.js is still loading. Please try again in a few seconds.");
+    return;
+  }
+  
+  let fontBase64 = null;
+  const sheets = Array.from(document.styleSheets);
+  for (const sheet of sheets) {
+    try {
+      const rules = Array.from(sheet.cssRules);
+      for (const rule of rules) {
+        if (rule.type === CSSRule.FONT_FACE_RULE) {
+          const fontFamily = rule.style.fontFamily.replace(/['"]/g, '');
+          if (fontFamily === fontVal) {
+            const src = rule.style.src;
+            const match = src.match(/url\(['"]?data:font\/[^;]+;base64,([^'"]+)['"]?\)/);
+            if (match) fontBase64 = match[1];
+          }
+        }
+      }
+    } catch(e) {}
+  }
+  
+  if (!fontBase64) {
+    alert("Could not extract font data for outlines. Ensure the font is fully loaded.");
+    return;
+  }
+  
+  const buffer = base64ToArrayBuffer(fontBase64);
+  const font = opentype.parse(buffer);
+  
+  const fontSize = 14;
+  
+  const fontVal_z = $('#fontFamily').value;
+  const fontStack_z = fontVal_z.startsWith('var(') ? MONO_STACK : fontVal_z;
+  const ctx_z = document.createElement('canvas').getContext('2d');
+  ctx_z.font = `${PREVIEW_FONT_SIZE}px ${fontStack_z}`;
+  const charW = ctx_z.measureText('M'.repeat(20)).width / 20;
+
+  const leading = parseFloat($('#leading').value);
+  const lineH = fontSize * leading;
+  const tracking = parseFloat($('#tracking').value);
+  const pad = 20;
+  
+  const W = Math.ceil(r.width * (charW + tracking) + pad * 2);
+  const H = Math.ceil(r.height * lineH + pad * 2);
+  const isTransparent = $('#bgTransparent').checked;
+  const fg = $('#fg').value, bg = $('#bg').value;
+  
+  const paths = [];
+  const scale = 1 / font.unitsPerEm * fontSize;
+  const baselineOffset = font.ascender * scale;
+  
+  for (let y = 0; y < r.height; y++) {
+    for (let x = 0; x < r.width; x++) {
+      const ch = r.grid[y][x];
+      if (ch === ' ' || !ch) continue;
+      
+      const px = pad + x * (charW + tracking);
+      const py = pad + y * lineH + baselineOffset;
+      
+      const color = (r.colorMode === 'image') ? r.colors[y*r.width + x] : fg;
+      const path = font.getPath(ch, px, py, fontSize);
+      path.fill = color;
+      paths.push(path.toSVG());
+    }
+  }
+  
+  const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+  ${!isTransparent ? `<rect width="100%" height="100%" fill="${bg}"/>` : ''}
+  <g>
+${paths.join('\n')}
+  </g>
+</svg>`;
+  download('ascii-art-outlines.svg', svg, 'image/svg+xml;charset=utf-8');
 }
 
 function renderToSvg(r) {
