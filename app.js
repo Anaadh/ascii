@@ -1119,7 +1119,9 @@ async function renderToSvgOutlines(r) {
       const py = pad + y * lineH + baselineOffset;
       
       const color = (r.colorMode === 'image') ? r.colors[y*r.width + x] : fg;
-      const path = font.getPath(ch, px, py, fontSize);
+      const path = font.getPath(ch, px, py, fontSize, {
+        features: { mark: true, mkmk: true, liga: true, rlig: true, ccmp: true }
+      });
       path.fill = color;
       paths.push(path.toSVG());
     }
