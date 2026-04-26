@@ -1119,11 +1119,37 @@ async function renderToSvgOutlines(r) {
       const py = pad + y * lineH + baselineOffset;
       
       const color = (r.colorMode === 'image') ? r.colors[y*r.width + x] : fg;
-      const path = font.getPath(ch, px, py, fontSize, {
-        features: { mark: true, mkmk: true, liga: true, rlig: true, ccmp: true }
-      });
-      path.fill = color;
-      paths.push(path.toSVG());
+      const glyphs = font.stringToGlyphs(ch);
+      if (glyphs.length === 0) continue;
+      
+      const baseGlyph = glyphs[0];
+      const basePath = baseGlyph.getPath(px, py, fontSize);
+      basePath.fill = color;
+      paths.push(basePath.toSVG());
+      
+      if (glyphs.length > 1) {
+        // Manually center diacritics horizontally over the base character
+        let baseBox;
+        try { baseBox = baseGlyph.getBoundingBox(); } catch(e) { baseBox = {x1:0, x2:0}; }
+        const baseCenterX = (baseBox.x1 + baseBox.x2) / 2;
+        
+        for (let i = 1; i < glyphs.length; i++) {
+          const markGlyph = glyphs[i];
+          let markBox;
+          try { markBox = markGlyph.getBoundingBox(); } catch(e) { markBox = {x1:0, x2:0}; }
+          
+          // Skip empty glyphs
+          if (markBox.x1 === 0 && markBox.x2 === 0 && markBox.y1 === 0 && markBox.y2 === 0) continue;
+          
+          const markCenterX = (markBox.x1 + markBox.x2) / 2;
+          const shiftFontUnits = baseCenterX - markCenterX;
+          const pxShift = shiftFontUnits * (fontSize / font.unitsPerEm);
+          
+          const markPath = markGlyph.getPath(px + pxShift, py, fontSize);
+          markPath.fill = color;
+          paths.push(markPath.toSVG());
+        }
+      }
     }
   }
   
