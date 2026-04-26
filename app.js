@@ -817,7 +817,19 @@ function renderCanvasPreview(r, cvs) {
       const ch = r.grid[y][x];
       if (ch === ' ' || !ch) continue;
       ctx.fillStyle = (r.colorMode === 'image') ? r.colors[y*r.width + x] : fg;
-      ctx.fillText(ch, x * (charW + tracking), y * lineH);
+      const px = x * (charW + tracking);
+      const py = y * lineH;
+      
+      if (ch.includes('\u0790') || ch.includes('\u0791')) {
+        ctx.save();
+        // Scale around the character's start position (or center if preferred, but start is simpler for grid)
+        ctx.translate(px, py);
+        ctx.scale(0.85, 1); 
+        ctx.fillText(ch, 0, 0);
+        ctx.restore();
+      } else {
+        ctx.fillText(ch, px, py);
+      }
     }
   }
 }
@@ -1030,7 +1042,18 @@ function renderToPng(r) {
       const ch = r.grid[y][x];
       if (ch === ' ' || !ch) continue;
       ctx.fillStyle = (r.colorMode === 'image') ? r.colors[y*r.width + x] : fg;
-      ctx.fillText(ch, pad + x * (charW + tracking), pad + y * lineH);
+      const px = pad + x * (charW + tracking);
+      const py = pad + y * lineH;
+
+      if (ch.includes('\u0790') || ch.includes('\u0791')) {
+        ctx.save();
+        ctx.translate(px, py);
+        ctx.scale(0.85, 1);
+        ctx.fillText(ch, 0, 0);
+        ctx.restore();
+      } else {
+        ctx.fillText(ch, px, py);
+      }
     }
   }
   
@@ -1122,10 +1145,11 @@ async function renderToSvgOutlines(r) {
       const glyphs = font.stringToGlyphs(ch);
       if (glyphs.length === 0) continue;
       
+      const clusterPaths = [];
       const baseGlyph = glyphs[0];
       const basePath = baseGlyph.getPath(px, py, fontSize);
       basePath.fill = color;
-      paths.push(basePath.toSVG());
+      clusterPaths.push(basePath.toSVG());
       
       if (glyphs.length > 1) {
         // Manually center diacritics horizontally over the base character
@@ -1138,7 +1162,6 @@ async function renderToSvgOutlines(r) {
           let markBox;
           try { markBox = markGlyph.getBoundingBox(); } catch(e) { markBox = {x1:0, x2:0}; }
           
-          // Skip empty glyphs
           if (markBox.x1 === 0 && markBox.x2 === 0 && markBox.y1 === 0 && markBox.y2 === 0) continue;
           
           const markCenterX = (markBox.x1 + markBox.x2) / 2;
@@ -1147,8 +1170,14 @@ async function renderToSvgOutlines(r) {
           
           const markPath = markGlyph.getPath(px + pxShift, py, fontSize);
           markPath.fill = color;
-          paths.push(markPath.toSVG());
+          clusterPaths.push(markPath.toSVG());
         }
+      }
+
+      if (ch.includes('\u0790') || ch.includes('\u0791')) {
+        paths.push(`<g transform="translate(${px},0) scale(0.85, 1) translate(${-px},0)">${clusterPaths.join('')}</g>`);
+      } else {
+        paths.push(clusterPaths.join(''));
       }
     }
   }
