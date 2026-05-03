@@ -837,7 +837,7 @@ function renderCanvasPreview(r, cvs) {
       
       if (ch.includes('\u0790') || ch.includes('\u0791') || ch.includes('\u0796')) {
         ctx.save();
-        ctx.translate(px + charW * 0.15, py);
+        ctx.translate(px + charW * 0.22, py);
         ctx.scale(0.85, 1);
         ctx.fillText(ch, 0, 0);
         ctx.restore();
@@ -1061,7 +1061,7 @@ function renderToPng(r) {
 
       if (ch.includes('\u0790') || ch.includes('\u0791') || ch.includes('\u0796')) {
         ctx.save();
-        ctx.translate(px + charW * 0.15, py);
+        ctx.translate(px + charW * 0.22, py);
         ctx.scale(0.85, 1);
         ctx.fillText(ch, 0, 0);
         ctx.restore();
@@ -1193,7 +1193,7 @@ async function renderToSvgOutlines(r) {
       }
 
       if (ch.includes('\u0790') || ch.includes('\u0791') || ch.includes('\u0796')) {
-        const shift = charW * 0.15;
+        const shift = charW * 0.22;
         paths.push(`<g transform="translate(${px + shift},0) scale(0.85, 1) translate(${-(px + shift)},0)">${clusterPaths.join('')}</g>`);
       } else {
         paths.push(clusterPaths.join(''));
@@ -1243,7 +1243,7 @@ function renderToSvg(r) {
       const py = pad + y * lineH;
       const color = (r.colorMode === 'image') ? r.colors[y * r.width + x] : fg;
       const isWide = ch.includes('ސ') || ch.includes('ޑ') || ch.includes('ޖ');
-      const ex = isWide ? (px + charW * 0.15).toFixed(2) : px.toFixed(2);
+      const ex = isWide ? (px + charW * 0.22).toFixed(2) : px.toFixed(2);
       const xform = isWide ? ` transform="translate(${ex},0) scale(0.85,1) translate(${(-ex)},0)"` : '';
       elements.push(`<text x="${ex}" y="${py.toFixed(2)}" fill="${color}" dominant-baseline="text-before-edge" xml:space="preserve"${xform}>${escapeHtml(ch)}</text>`);
     }
