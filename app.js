@@ -835,11 +835,10 @@ function renderCanvasPreview(r, cvs) {
       const px = x * (charW + tracking);
       const py = y * lineH;
       
-      if (ch.includes('\u0790') || ch.includes('\u0791')) {
+      if (ch.includes('\u0790') || ch.includes('\u0791') || ch.includes('\u0796')) {
         ctx.save();
-        // Scale around the character's start position (or center if preferred, but start is simpler for grid)
-        ctx.translate(px, py);
-        ctx.scale(0.85, 1); 
+        ctx.translate(px + charW * 0.15, py);
+        ctx.scale(0.85, 1);
         ctx.fillText(ch, 0, 0);
         ctx.restore();
       } else {
@@ -1060,9 +1059,9 @@ function renderToPng(r) {
       const px = pad + x * (charW + tracking);
       const py = pad + y * lineH;
 
-      if (ch.includes('\u0790') || ch.includes('\u0791')) {
+      if (ch.includes('\u0790') || ch.includes('\u0791') || ch.includes('\u0796')) {
         ctx.save();
-        ctx.translate(px, py);
+        ctx.translate(px + charW * 0.15, py);
         ctx.scale(0.85, 1);
         ctx.fillText(ch, 0, 0);
         ctx.restore();
@@ -1071,7 +1070,7 @@ function renderToPng(r) {
       }
     }
   }
-  
+
   cvs.toBlob(blob => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1193,8 +1192,9 @@ async function renderToSvgOutlines(r) {
         }
       }
 
-      if (ch.includes('\u0790') || ch.includes('\u0791')) {
-        paths.push(`<g transform="translate(${px},0) scale(0.85, 1) translate(${-px},0)">${clusterPaths.join('')}</g>`);
+      if (ch.includes('\u0790') || ch.includes('\u0791') || ch.includes('\u0796')) {
+        const shift = charW * 0.15;
+        paths.push(`<g transform="translate(${px + shift},0) scale(0.85, 1) translate(${-(px + shift)},0)">${clusterPaths.join('')}</g>`);
       } else {
         paths.push(clusterPaths.join(''));
       }
@@ -1242,7 +1242,10 @@ function renderToSvg(r) {
       const px = pad + x * (charW + tracking);
       const py = pad + y * lineH;
       const color = (r.colorMode === 'image') ? r.colors[y * r.width + x] : fg;
-      elements.push(`<text x="${px.toFixed(2)}" y="${py.toFixed(2)}" fill="${color}" dominant-baseline="text-before-edge" xml:space="preserve">${escapeHtml(ch)}</text>`);
+      const isWide = ch.includes('ސ') || ch.includes('ޑ') || ch.includes('ޖ');
+      const ex = isWide ? (px + charW * 0.15).toFixed(2) : px.toFixed(2);
+      const xform = isWide ? ` transform="translate(${ex},0) scale(0.85,1) translate(${(-ex)},0)"` : '';
+      elements.push(`<text x="${ex}" y="${py.toFixed(2)}" fill="${color}" dominant-baseline="text-before-edge" xml:space="preserve"${xform}>${escapeHtml(ch)}</text>`);
     }
   }
 
