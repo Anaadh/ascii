@@ -1133,21 +1133,6 @@ async function renderToSvgOutlines(r) {
   const scale = 1 / font.unitsPerEm * fontSize;
   const baselineOffset = font.ascender * scale;
 
-  // Detect if font stores glyph paths with non-standard y-down orientation.
-  // In standard fonts, the first Thaana consonant (HAA, U+0780) sits above
-  // the baseline so its bbox.y2 (yMax) is positive. If it's negative the font
-  // is y-inverted and every glyph path needs flipping around its baseline.
-  let fontNeedsYFlip = false;
-  {
-    const probe = font.charToGlyph('\u0780');
-    if (probe && probe.index > 0) {
-      try { fontNeedsYFlip = probe.getBoundingBox().y2 < 0; } catch(e) {}
-    }
-  }
-  const flipWrap = (svgStr, py) => fontNeedsYFlip
-    ? `<g transform="translate(0,${2 * py}) scale(1,-1)">${svgStr}</g>`
-    : svgStr;
-
   for (let y = 0; y < r.height; y++) {
     for (let x = 0; x < r.width; x++) {
       const ch = r.grid[y][x];
@@ -1164,17 +1149,17 @@ async function renderToSvgOutlines(r) {
       const baseGlyph = glyphs[0];
       const basePath = baseGlyph.getPath(px, py, fontSize);
       basePath.fill = color;
-      clusterPaths.push(flipWrap(basePath.toSVG(), py));
+      clusterPaths.push(basePath.toSVG()); // base glyph: no flip
 
       if (glyphs.length > 1) {
         let baseBox;
-        try { baseBox = baseGlyph.getBoundingBox(); } catch(e) { baseBox = {x1:0, x2:0}; }
+        try { baseBox = baseGlyph.getBoundingBox(); } catch(e) { baseBox = {x1:0, x2:0, y1:0, y2:0}; }
         const baseCenterX = (baseBox.x1 + baseBox.x2) / 2;
 
         for (let i = 1; i < glyphs.length; i++) {
           const markGlyph = glyphs[i];
           let markBox;
-          try { markBox = markGlyph.getBoundingBox(); } catch(e) { markBox = {x1:0, x2:0}; }
+          try { markBox = markGlyph.getBoundingBox(); } catch(e) { markBox = {x1:0, x2:0, y1:0, y2:0}; }
 
           if (markBox.x1 === 0 && markBox.x2 === 0 && markBox.y1 === 0 && markBox.y2 === 0) continue;
 
@@ -1184,7 +1169,12 @@ async function renderToSvgOutlines(r) {
 
           const markPath = markGlyph.getPath(px + pxShift, py, fontSize);
           markPath.fill = color;
-          clusterPaths.push(flipWrap(markPath.toSVG(), py));
+          // Marks with yMax < 0 are stored below-baseline (non-standard y-down),
+          // flip them around the baseline so they appear above the consonant.
+          const markSvg = markBox.y2 < 0
+            ? `<g transform="translate(0,${2*py}) scale(1,-1)">${markPath.toSVG()}</g>`
+            : markPath.toSVG();
+          clusterPaths.push(markSvg);
         }
       }
 
