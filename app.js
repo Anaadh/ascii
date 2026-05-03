@@ -625,8 +625,8 @@ function renderWords(bright, w, h, grid) {
         continue;
       }
 
-      // Thaana: don't place words with any fili directly below a row with eebeyli (ީ)
-      if (diacSkips < words.length && word.some(c => /[ަ-ް]/.test(c))) {
+      // Thaana: don't place words with tall fili (ާ/ޫ/ޭ/ޯ) directly below a row with eebeyli (ީ)
+      if (diacSkips < words.length && word.some(c => c.includes('ާ') || c.includes('ޫ') || c.includes('ޭ') || c.includes('ޯ'))) {
         const cy = cells[ci].y;
         if (cy > 0) {
           let conflict = false;
