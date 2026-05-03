@@ -1198,35 +1198,39 @@ ${paths.join('\n')}
 
 function renderToSvg(r) {
   const fontSize = 14;
-  const aspect = parseFloat($('#aspect').value);
-  const charW = fontSize * aspect;
+  const fontVal = $('#fontFamily').value;
+  const fontStack = fontVal.startsWith('var(') ? MONO_STACK : fontVal;
+  const ctx_m = document.createElement('canvas').getContext('2d');
+  ctx_m.font = `${fontSize}px ${fontStack}`;
+  const charW = ctx_m.measureText('M'.repeat(20)).width / 20;
   const leading = parseFloat($('#leading').value);
   const lineH = fontSize * leading;
   const tracking = parseFloat($('#tracking').value);
   const pad = 20;
-  
+
   const W = Math.ceil(r.width * (charW + tracking) + pad * 2);
   const H = Math.ceil(r.height * lineH + pad * 2);
   const isTransparent = $('#bgTransparent').checked;
   const fg = $('#fg').value, bg = $('#bg').value;
-  
-  const fontVal = $('#fontFamily').value;
-  const fontStack = fontVal.startsWith('var(') ? '"Courier New", Courier, monospace' : fontVal;
 
   const fontFaces = Array.from(document.styleSheets)
-    .flatMap(sheet => {
-      try { return Array.from(sheet.cssRules); } catch(e) { return []; }
-    })
+    .flatMap(sheet => { try { return Array.from(sheet.cssRules); } catch(e) { return []; } })
     .filter(rule => rule.type === CSSRule.FONT_FACE_RULE)
     .map(rule => rule.cssText)
     .join('\n');
 
-  const lines = r.lines.map((line, y) => {
-    // line already contains LRO/PDF from convert(), but we also apply SVG attributes to be absolutely sure
-    const safe = escapeHtml(line);
-    return `<text x="${pad}" y="${pad + (y+1) * lineH - 2}" xml:space="preserve" direction="ltr" unicode-bidi="bidi-override" letter-spacing="${tracking}">${safe}</text>`;
-  }).join('\n');
-  
+  const elements = [];
+  for (let y = 0; y < r.height; y++) {
+    for (let x = 0; x < r.width; x++) {
+      const ch = r.grid[y][x];
+      if (ch === ' ' || !ch) continue;
+      const px = pad + x * (charW + tracking);
+      const py = pad + y * lineH;
+      const color = (r.colorMode === 'image') ? r.colors[y * r.width + x] : fg;
+      elements.push(`<text x="${px.toFixed(2)}" y="${py.toFixed(2)}" fill="${color}" dominant-baseline="text-before-edge" xml:space="preserve">${escapeHtml(ch)}</text>`);
+    }
+  }
+
   const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
   <defs>
@@ -1236,8 +1240,8 @@ function renderToSvg(r) {
     </style>
   </defs>
   ${!isTransparent ? `<rect width="100%" height="100%" fill="${bg}"/>` : ''}
-  <g fill="${fg}" font-family="${fontStack}, monospace" font-size="${fontSize}" xml:space="preserve">
-${lines}
+  <g font-family="${fontStack}, monospace" font-size="${fontSize}" xml:space="preserve">
+${elements.join('\n')}
   </g>
 </svg>`;
   download('ascii-art.svg', svg, 'image/svg+xml;charset=utf-8');
