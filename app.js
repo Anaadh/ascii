@@ -625,14 +625,14 @@ function renderWords(bright, w, h, grid) {
         continue;
       }
 
-      // Thaana: don't place eebeyli (ީ) words directly below aabafili (ަ/ާ) words
-      if (diacSkips < words.length && word.some(c => c.includes('ީ'))) {
+      // Thaana: don't place words with any fili directly below a row with eebeyli (ީ)
+      if (diacSkips < words.length && word.some(c => /[ަ-ް]/.test(c))) {
         const cy = cells[ci].y;
         if (cy > 0) {
           let conflict = false;
           for (let k = 0; k < wlen && ci + k < cells.length; k++) {
             const above = grid[cy - 1][cells[ci + k].x] || '';
-            if (above.includes('ަ') || above.includes('ާ')) { conflict = true; break; }
+            if (above.includes('ީ')) { conflict = true; break; }
           }
           if (conflict) { wi++; diacSkips++; continue; }
         }
