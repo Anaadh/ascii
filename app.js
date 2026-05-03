@@ -601,6 +601,7 @@ function renderWords(bright, w, h, grid) {
 
     let ci = 0;  // cell index
     let wi = 0;  // word index (cycles), only advances on successful placement
+    let diacSkips = 0;
 
     while (ci < cells.length) {
       const runAvail = cells[ci].run;
@@ -612,6 +613,7 @@ function renderWords(bright, w, h, grid) {
           grid[cells[k].y][cells[k].x] = filler;
         }
         ci = end;
+        diacSkips = 0;
         continue;
       }
 
@@ -619,10 +621,23 @@ function renderWords(bright, w, h, grid) {
       const wlen = word.length;
 
       if (wlen > runAvail) {
-        // This specific word doesn't fit — try the next word instead
         wi++;
         continue;
       }
+
+      // Thaana: don't place eebeyli (ީ) words directly below aabafili (ަ/ާ) words
+      if (diacSkips < words.length && word.some(c => c.includes('ީ'))) {
+        const cy = cells[ci].y;
+        if (cy > 0) {
+          let conflict = false;
+          for (let k = 0; k < wlen && ci + k < cells.length; k++) {
+            const above = grid[cy - 1][cells[ci + k].x] || '';
+            if (above.includes('ަ') || above.includes('ާ')) { conflict = true; break; }
+          }
+          if (conflict) { wi++; diacSkips++; continue; }
+        }
+      }
+      diacSkips = 0;
 
       // Place the word and advance the word index
       for (let k = 0; k < wlen; k++) {
