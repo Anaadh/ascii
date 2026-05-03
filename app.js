@@ -1132,45 +1132,59 @@ async function renderToSvgOutlines(r) {
   const paths = [];
   const scale = 1 / font.unitsPerEm * fontSize;
   const baselineOffset = font.ascender * scale;
-  
+
+  // Detect if font stores glyph paths with non-standard y-down orientation.
+  // In standard fonts, the first Thaana consonant (HAA, U+0780) sits above
+  // the baseline so its bbox.y2 (yMax) is positive. If it's negative the font
+  // is y-inverted and every glyph path needs flipping around its baseline.
+  let fontNeedsYFlip = false;
+  {
+    const probe = font.charToGlyph('\u0780');
+    if (probe && probe.index > 0) {
+      try { fontNeedsYFlip = probe.getBoundingBox().y2 < 0; } catch(e) {}
+    }
+  }
+  const flipWrap = (svgStr, py) => fontNeedsYFlip
+    ? `<g transform="translate(0,${2 * py}) scale(1,-1)">${svgStr}</g>`
+    : svgStr;
+
   for (let y = 0; y < r.height; y++) {
     for (let x = 0; x < r.width; x++) {
       const ch = r.grid[y][x];
       if (ch === ' ' || !ch) continue;
-      
+
       const px = pad + x * (charW + tracking);
       const py = pad + y * lineH + baselineOffset;
-      
+
       const color = (r.colorMode === 'image') ? r.colors[y*r.width + x] : fg;
       const glyphs = font.stringToGlyphs(ch);
       if (glyphs.length === 0) continue;
-      
+
       const clusterPaths = [];
       const baseGlyph = glyphs[0];
       const basePath = baseGlyph.getPath(px, py, fontSize);
       basePath.fill = color;
-      clusterPaths.push(basePath.toSVG());
-      
+      clusterPaths.push(flipWrap(basePath.toSVG(), py));
+
       if (glyphs.length > 1) {
-        // Manually center diacritics horizontally over the base character
         let baseBox;
         try { baseBox = baseGlyph.getBoundingBox(); } catch(e) { baseBox = {x1:0, x2:0}; }
         const baseCenterX = (baseBox.x1 + baseBox.x2) / 2;
-        
+
         for (let i = 1; i < glyphs.length; i++) {
           const markGlyph = glyphs[i];
           let markBox;
           try { markBox = markGlyph.getBoundingBox(); } catch(e) { markBox = {x1:0, x2:0}; }
-          
+
           if (markBox.x1 === 0 && markBox.x2 === 0 && markBox.y1 === 0 && markBox.y2 === 0) continue;
-          
+
           const markCenterX = (markBox.x1 + markBox.x2) / 2;
           const shiftFontUnits = baseCenterX - markCenterX;
           const pxShift = shiftFontUnits * (fontSize / font.unitsPerEm);
-          
+
           const markPath = markGlyph.getPath(px + pxShift, py, fontSize);
           markPath.fill = color;
-          clusterPaths.push(markPath.toSVG());
+          clusterPaths.push(flipWrap(markPath.toSVG(), py));
         }
       }
 
